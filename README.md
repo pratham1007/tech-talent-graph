@@ -2,8 +2,8 @@
 
 A graph database app mapping developers, skills, projects & companies. Uses CognoDB + FastAPI with multi-hop Cypher traversals to answer talent questions that are awkward in SQL. Built with Python and vanilla JS.
 
-**Live demo:** _add your hosted URL here_
-**Screen recording:** _add your Loom/YouTube link here_
+**Live demo:** https://tech-talent-graph.onrender.com/
+**Screen recording:** (https://www.loom.com/share/bfc127cfaf004e609977e5effdfb5abe)
 
 ---
 
