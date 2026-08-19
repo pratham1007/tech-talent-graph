@@ -83,7 +83,8 @@ def project_team(project_id: str):
 
 # ── Serve frontend ────────────────────────────────────────────────────────────
 
-app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
+if os.path.isdir("frontend/static"):
+    app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
 @app.get("/{full_path:path}")
 def serve_frontend(full_path: str):
