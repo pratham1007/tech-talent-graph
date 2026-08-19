@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tech Talent Graph</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3250;
+    --accent: #6c63ff;
+    --accent2: #a78bfa;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --green: #34d399;
+    --yellow: #fbbf24;
+    --red: #f87171;
+    --radius: 10px;
+    --font: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; }
+
+  /* Layout */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 220px; flex-shrink: 0; background: var(--surface);
+    border-right: 1px solid var(--border); padding: 24px 0;
+    display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh;
+  }
+  .logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .logo-icon { font-size: 22px; margin-bottom: 4px; }
+  .logo h1 { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1.2; }
+  .logo p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  nav a {
+    display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+    color: var(--muted); text-decoration: none; font-size: 13.5px; font-weight: 500;
+    border-radius: 0; transition: all .15s; cursor: pointer; border: none; background: none; width: 100%;
+  }
+  nav a:hover { color: var(--text); background: var(--surface2); }
+  nav a.active { color: var(--accent2); background: var(--surface2); border-right: 2px solid var(--accent); }
+  nav a .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .main { margin-left: 220px; flex: 1; padding: 32px; max-width: 1100px; }
+
+  /* Stats bar */
+  .stats-bar { display: flex; gap: 16px; margin-bottom: 32px; flex-wrap: wrap; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 22px; flex: 1; min-width: 130px;
+  }
+  .stat-card .val { font-size: 28px; font-weight: 700; color: var(--accent2); }
+  .stat-card .lbl { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Page header */
+  .page-header { margin-bottom: 24px; }
+  .page-header h2 { font-size: 20px; font-weight: 700; }
+  .page-header p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* Search / filter bar */
+  .toolbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-wrap input {
+    width: 100%; background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 9px 12px 9px 36px; color: var(--text);
+    font-size: 13.5px; outline: none; transition: border .15s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap .search-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 14px; }
+  select {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 9px 12px; color: var(--text); font-size: 13.5px; outline: none; cursor: pointer;
+  }
+  select:focus { border-color: var(--accent); }
+
+  /* Cards grid */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; cursor: pointer; transition: border-color .15s, transform .1s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-1px); }
+  .card-name { font-size: 15px; font-weight: 600; margin-bottom: 2px; }
+  .card-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    font-size: 11px; padding: 3px 8px; border-radius: 20px;
+    background: var(--surface2); color: var(--accent2); border: 1px solid var(--border);
+  }
+  .tag.green { color: var(--green); }
+  .tag.yellow { color: var(--yellow); }
+
+  /* Detail panel */
+  .detail-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100;
+    display: flex; align-items: flex-start; justify-content: flex-end;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .detail-overlay.open { opacity: 1; pointer-events: all; }
+  .detail-panel {
+    width: 480px; max-width: 95vw; height: 100vh; overflow-y: auto;
+    background: var(--surface); border-left: 1px solid var(--border);
+    padding: 28px; transform: translateX(40px); transition: transform .2s;
+  }
+  .detail-overlay.open .detail-panel { transform: translateX(0); }
+  .detail-close {
+    float: right; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 13px;
+  }
+  .detail-close:hover { color: var(--text); }
+  .detail-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .detail-sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .detail-section { margin-bottom: 20px; }
+  .detail-section h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }
+  .detail-bio { font-size: 13.5px; color: var(--text); line-height: 1.6; }
+
+  .network-list { display: flex; flex-direction: column; gap: 8px; }
+  .network-item {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .network-item .ni-name { font-size: 13.5px; font-weight: 500; }
+  .network-item .ni-skills { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .overlap-badge {
+    font-size: 11px; background: var(--accent); color: #fff;
+    border-radius: 20px; padding: 2px 8px; white-space: nowrap;
+  }
+
+  /* Skills page */
+  .skills-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+  .skill-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px;
+  }
+  .skill-card .sk-name { font-size: 15px; font-weight: 600; }
+  .skill-card .sk-cat { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .bar-wrap { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; }
+  .bar { height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s; }
+  .sk-count { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* Bridges page */
+  .bridge-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; margin-bottom: 12px;
+  }
+  .bridge-card .br-name { font-size: 16px; font-weight: 600; }
+  .bridge-card .br-cat { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .company-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .company-pill {
+    font-size: 11px; padding: 3px 10px; border-radius: 20px;
+    background: var(--surface2); color: var(--yellow); border: 1px solid var(--border);
+  }
+
+  /* Projects page */
+  .project-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; cursor: pointer; transition: border-color .15s;
+  }
+  .project-card:hover { border-color: var(--accent); }
+  .project-card .pr-name { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .project-card .pr-desc { font-size: 13px; color: var(--muted); margin-bottom: 12px; line-height: 1.5; }
+  .status-badge {
+    display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px;
+  }
+  .status-active { background: rgba(52,211,153,.15); color: var(--green); }
+  .status-completed { background: rgba(251,191,36,.15); color: var(--yellow); }
+
+  /* Team panel */
+  .team-item {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 14px; margin-bottom: 8px;
+  }
+  .team-item .tm-name { font-size: 13.5px; font-weight: 500; }
+  .team-item .tm-skills { font-size: 11px; color: var(--muted); margin-top: 3px; }
+
+  /* Loading / empty */
+  .loading { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+  .loading .spinner {
+    width: 28px; height: 28px; border: 3px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .7s linear infinite; margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); font-size: 14px; }
+  .empty .empty-icon { font-size: 36px; margin-bottom: 10px; }
+  .error-banner {
+    background: rgba(248,113,113,.1); border: 1px solid rgba(248,113,113,.3);
+    color: var(--red); border-radius: var(--radius); padding: 14px 18px;
+    margin-bottom: 20px; font-size: 13.5px;
+  }
+
+  /* Page visibility */
+  .page { display: none; }
+  .page.active { display: block; }
+
+  @media (max-width: 700px) {
+    .sidebar { width: 60px; }
+    .sidebar .logo p, .sidebar nav a span, .logo h1, .logo p { display: none; }
+    .main { margin-left: 60px; padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">🕸️</div>
+      <h1>Tech Talent<br>Graph</h1>
+      <p>Powered by CognoDB</p>
+    </div>
+    <nav>
+      <a class="active" data-page="developers"><span class="icon">👩‍💻</span><span>Developers</span></a>
+      <a data-page="skills"><span class="icon">⚡</span><span>Skills</span></a>
+      <a data-page="bridges"><span class="icon">🌉</span><span>Skill Bridges</span></a>
+      <a data-page="projects"><span class="icon">🚀</span><span>Projects</span></a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-card"><div class="val">—</div><div class="lbl">Developers</div></div>
+      <div class="stat-card"><div class="val">—</div><div class="lbl">Skills</div></div>
+      <div class="stat-card"><div class="val">—</div><div class="lbl">Projects</div></div>
+      <div class="stat-card"><div class="val">—</div><div class="lbl">Companies</div></div>
+      <div class="stat-card"><div class="val">—</div><div class="lbl">Relationships</div></div>
+    </div>
+
+    <!-- Error banner -->
+    <div class="error-banner" id="errorBanner" style="display:none"></div>
+
+    <!-- Developers page -->
+    <div class="page active" id="page-developers">
+      <div class="page-header">
+        <h2>Developers</h2>
+        <p>Browse engineers and explore their skill connections</p>
+      </div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input id="devSearch" type="text" placeholder="Search by name…" />
+        </div>
+        <select id="skillFilter"><option value="">All skills</option></select>
+      </div>
+      <div id="devList"></div>
+    </div>
+
+    <!-- Skills page -->
+    <div class="page" id="page-skills">
+      <div class="page-header">
+        <h2>Skills</h2>
+        <p>All skills ranked by number of developers</p>
+      </div>
+      <div id="skillList"></div>
+    </div>
+
+    <!-- Bridges page -->
+    <div class="page" id="page-bridges">
+      <div class="page-header">
+        <h2>Skill Bridges</h2>
+        <p>Skills that span the most companies — a graph-native insight</p>
+      </div>
+      <div id="bridgeList"></div>
+    </div>
+
+    <!-- Projects page -->
+    <div class="page" id="page-projects">
+      <div class="page-header">
+        <h2>Projects</h2>
+        <p>Click a project to find best-fit developers via graph traversal</p>
+      </div>
+      <div id="projectList"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Detail overlay (developer) -->
+<div class="detail-overlay" id="devOverlay">
+  <div class="detail-panel" id="devPanel">
+    <button class="detail-close" id="devClose">✕ Close</button>
+    <div id="devPanelContent"></div>
+  </div>
+</div>
+
+<!-- Detail overlay (project team) -->
+<div class="detail-overlay" id="projOverlay">
+  <div class="detail-panel" id="projPanel">
+    <button class="detail-close" id="projClose">✕ Close</button>
+    <div id="projPanelContent"></div>
+  </div>
+</div>
+
+<script>
+const API = '';
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+async function apiFetch(path) {
+  const res = await fetch(API + path);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+function showError(msg) {
+  const el = document.getElementById('errorBanner');
+  el.textContent = '⚠ ' + msg;
+  el.style.display = 'block';
+}
+function clearError() { document.getElementById('errorBanner').style.display = 'none'; }
+
+function loading(id) {
+  document.getElementById(id).innerHTML =
+    '<div class="loading"><div class="spinner"></div>Loading…</div>';
+}
+function empty(id, msg = 'No results found.') {
+  document.getElementById(id).innerHTML =
+    `<div class="empty"><div class="empty-icon">🔍</div>${msg}</div>`;
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const s = await apiFetch('/api/stats');
+    const cards = document.querySelectorAll('#statsBar .stat-card .val');
+    [s.devs, s.skills, s.projects, s.companies, s.rels].forEach((v, i) => {
+      cards[i].textContent = v ?? '—';
+    });
+  } catch (e) { showError('Database unreachable — ' + e.message); }
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const pages = { developers: loadDevelopers, skills: loadSkills, bridges: loadBridges, projects: loadProjects };
+
+document.querySelectorAll('nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    document.querySelectorAll('nav a').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    const pg = a.dataset.page;
+    document.getElementById('page-' + pg).classList.add('active');
+    pages[pg]();
+  });
+});
+
+// ── Developers ────────────────────────────────────────────────────────────────
+let devSearchTimer;
+async function loadDevelopers() {
+  clearError();
+  const q = document.getElementById('devSearch').value;
+  const skill = document.getElementById('skillFilter').value;
+  loading('devList');
+  try {
+    const devs = await apiFetch(`/api/developers?q=${encodeURIComponent(q)}&skill=${encodeURIComponent(skill)}`);
+    renderDevs(devs);
+  } catch (e) { showError(e.message); empty('devList', 'Could not load developers.'); }
+}
+
+function renderDevs(devs) {
+  if (!devs.length) { empty('devList'); return; }
+  const grid = document.createElement('div');
+  grid.className = 'grid';
+  devs.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-name">${d.name}</div>
+      <div class="card-sub">${d.title} · ${d.location}</div>
+      <div class="tags">${(d.skills || []).slice(0,5).map(s => `<span class="tag">${s}</span>`).join('')}
+      ${d.skills.length > 5 ? `<span class="tag">+${d.skills.length - 5}</span>` : ''}</div>`;
+    card.addEventListener('click', () => openDev(d.id));
+    grid.appendChild(card);
+  });
+  document.getElementById('devList').replaceChildren(grid);
+}
+
+document.getElementById('devSearch').addEventListener('input', () => {
+  clearTimeout(devSearchTimer);
+  devSearchTimer = setTimeout(loadDevelopers, 300);
+});
+document.getElementById('skillFilter').addEventListener('change', loadDevelopers);
+
+async function loadSkillFilter() {
+  try {
+    const skills = await apiFetch('/api/skills');
+    const sel = document.getElementById('skillFilter');
+    skills.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.skill; opt.textContent = s.skill;
+      sel.appendChild(opt);
+    });
+  } catch (_) {}
+}
+
+async function openDev(id) {
+  const overlay = document.getElementById('devOverlay');
+  const content = document.getElementById('devPanelContent');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading…</div>';
+  overlay.classList.add('open');
+  try {
+    const [dev, network] = await Promise.all([
+      apiFetch(`/api/developers/${id}`),
+      apiFetch(`/api/developers/${id}/network`)
+    ]);
+    content.innerHTML = `
+      <div class="detail-title">${dev.name}</div>
+      <div class="detail-sub">${dev.title} · ${dev.location}</div>
+      <div class="detail-section">
+        <h4>About</h4>
+        <div class="detail-bio">${dev.bio || '—'}</div>
+      </div>
+      <div class="detail-section">
+        <h4>Skills</h4>
+        <div class="tags">${(dev.skills||[]).map(s=>`<span class="tag">${s}</span>`).join('')}</div>
+      </div>
+      <div class="detail-section">
+        <h4>Companies</h4>
+        <div class="tags">${(dev.companies||[]).map(c=>`<span class="tag yellow">${c}</span>`).join('')}</div>
+      </div>
+      <div class="detail-section">
+        <h4>Projects</h4>
+        <div class="tags">${(dev.projects||[]).map(p=>`<span class="tag green">${p}</span>`).join('')}</div>
+      </div>
+      <div class="detail-section">
+        <h4>Skill Network — 2-hop connections (${network.length})</h4>
+        <div class="network-list">
+          ${network.length ? network.map(n => `
+            <div class="network-item">
+              <div>
+                <div class="ni-name">${n.name}</div>
+                <div class="ni-skills">${n.shared_skills.join(', ')}</div>
+              </div>
+              <span class="overlap-badge">${n.overlap} shared</span>
+            </div>`).join('') : '<div style="color:var(--muted);font-size:13px">No connections found.</div>'}
+        </div>
+      </div>`;
+  } catch (e) {
+    content.innerHTML = `<div class="error-banner">Failed to load: ${e.message}</div>`;
+  }
+}
+
+document.getElementById('devClose').addEventListener('click', () =>
+  document.getElementById('devOverlay').classList.remove('open'));
+document.getElementById('devOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('devOverlay'))
+    document.getElementById('devOverlay').classList.remove('open');
+});
+
+// ── Skills ────────────────────────────────────────────────────────────────────
+async function loadSkills() {
+  clearError(); loading('skillList');
+  try {
+    const skills = await apiFetch('/api/skills');
+    if (!skills.length) { empty('skillList', 'No skills found.'); return; }
+    const max = skills[0].developer_count;
+    const grid = document.createElement('div');
+    grid.className = 'skills-grid';
+    skills.forEach(s => {
+      const card = document.createElement('div');
+      card.className = 'skill-card';
+      const pct = Math.round((s.developer_count / max) * 100);
+      card.innerHTML = `
+        <div class="sk-name">${s.skill}</div>
+        <div class="sk-cat">${s.category}</div>
+        <div class="bar-wrap"><div class="bar" style="width:${pct}%"></div></div>
+        <div class="sk-count">${s.developer_count} developer${s.developer_count !== 1 ? 's' : ''}</div>`;
+      grid.appendChild(card);
+    });
+    document.getElementById('skillList').replaceChildren(grid);
+  } catch (e) { showError(e.message); empty('skillList', 'Could not load skills.'); }
+}
+
+// ── Bridges ───────────────────────────────────────────────────────────────────
+async function loadBridges() {
+  clearError(); loading('bridgeList');
+  try {
+    const bridges = await apiFetch('/api/skills/bridges');
+    if (!bridges.length) { empty('bridgeList', 'No bridge skills found.'); return; }
+    const container = document.createElement('div');
+    bridges.forEach(b => {
+      const card = document.createElement('div');
+      card.className = 'bridge-card';
+      card.innerHTML = `
+        <div class="br-name">${b.skill}</div>
+        <div class="br-cat">${b.category} · ${b.dev_count} developers · spans ${b.company_count} companies</div>
+        <div class="company-pills">${b.companies.map(c=>`<span class="company-pill">${c}</span>`).join('')}</div>`;
+      container.appendChild(card);
+    });
+    document.getElementById('bridgeList').replaceChildren(container);
+  } catch (e) { showError(e.message); empty('bridgeList', 'Could not load bridges.'); }
+}
+
+// ── Projects ──────────────────────────────────────────────────────────────────
+async function loadProjects() {
+  clearError(); loading('projectList');
+  try {
+    const projects = await apiFetch('/api/projects');
+    if (!projects.length) { empty('projectList', 'No projects found.'); return; }
+    const grid = document.createElement('div');
+    grid.className = 'grid';
+    projects.forEach(p => {
+      const card = document.createElement('div');
+      card.className = 'project-card';
+      card.innerHTML = `
+        <span class="status-badge status-${p.status}">${p.status}</span>
+        <div class="pr-name">${p.name}</div>
+        <div class="pr-desc">${p.description}</div>
+        <div class="tags">${(p.required_skills||[]).slice(0,4).map(s=>`<span class="tag">${s}</span>`).join('')}</div>`;
+      card.addEventListener('click', () => openProject(p.id, p.name));
+      grid.appendChild(card);
+    });
+    document.getElementById('projectList').replaceChildren(grid);
+  } catch (e) { showError(e.message); empty('projectList', 'Could not load projects.'); }
+}
+
+async function openProject(id, name) {
+  const overlay = document.getElementById('projOverlay');
+  const content = document.getElementById('projPanelContent');
+  content.innerHTML = '<div class="loading"><div class="spinner"></div>Finding best-fit developers…</div>';
+  overlay.classList.add('open');
+  try {
+    const team = await apiFetch(`/api/projects/${id}/team`);
+    content.innerHTML = `
+      <div class="detail-title">${name}</div>
+      <div class="detail-sub">Best-fit developers via 3-hop graph traversal</div>
+      <div class="detail-section">
+        <h4>Recommended Team (${team.length})</h4>
+        ${team.length ? team.map(t => `
+          <div class="team-item">
+            <div class="tm-name">${t.name} <span style="color:var(--muted);font-size:11px">· ${t.title}</span></div>
+            <div class="tm-skills">Matches: ${t.matched_skills.join(', ')}</div>
+            ${t.relevant_companies.length ? `<div class="tm-skills" style="color:var(--yellow)">Via: ${t.relevant_companies.join(', ')}</div>` : ''}
+          </div>`).join('') : '<div style="color:var(--muted);font-size:13px">No matching developers found.</div>'}
+      </div>`;
+  } catch (e) {
+    content.innerHTML = `<div class="error-banner">Failed to load: ${e.message}</div>`;
+  }
+}
+
+document.getElementById('projClose').addEventListener('click', () =>
+  document.getElementById('projOverlay').classList.remove('open'));
+document.getElementById('projOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('projOverlay'))
+    document.getElementById('projOverlay').classList.remove('open');
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadStats();
+loadSkillFilter();
+loadDevelopers();
+</script>
+</body>
+</html>
